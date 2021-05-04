@@ -1,0 +1,50 @@
+version: "3"
+
+services: 
+    app:
+      image: pfa_docker2_app 
+      container_name: node
+      entrypoint: dockerize -wait tcp://db:3306 -timeout 20s docker-entrypoint.sh
+      networks: 
+        - pfa_net 
+        - pfa_docker_pfa_net       
+      volumes: 
+        - ./node:/usr/src/app
+     
+      tty: true
+      depends_on: 
+        - dbpfa
+
+    dbpfa:
+      image: mysql:5.7
+      command: --default-authentication-plugin=mysql_native_password
+      container_name: db
+      restart: always
+      tty: true
+
+      environment: 
+        - MYSQL_ROOT_PASSWORD=pfadocker
+        - MYSQL_DATABASE=pfa          
+
+      volumes: 
+        - ./mysql/dbdata:/var/lib/mysql
+        - ./mysql/init.d:/docker-entrypoint-initdb.d       
+           
+      networks: 
+        - pfa_net
+    
+    nginx: 
+      image: adortolan/nginx_pfa
+      restart: always      
+      depends_on: 
+          - app
+      ports: 
+        - "8000:80"
+      networks: 
+        - pfa_docker_pfa_net
+
+networks: 
+  pfa_net:
+      driver: bridge 
+  pfa_docker_pfa_net:
+      driver: bridge    
